@@ -1,9 +1,11 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/gemini.js", "use": "@vercel/node" }
+    { "src": "api/gemini.js", "use": "@vercel/node" },
+    { "src": "api/copilot.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/gemini", "dest": "/api/gemini.js" }
+    { "src": "/api/gemini", "dest": "/api/gemini.js" },
+    { "src": "/api/copilot", "dest": "/api/copilot.js" }
   ]
 }
