@@ -1,4 +1,4 @@
-const axios = require('axios');
+import axios from 'axios';
 
 export default async function handler(req, res) {
   // ===== CORS Fix =====
@@ -15,7 +15,6 @@ export default async function handler(req, res) {
   if (!prompt) return res.status(400).json({ error: 'Prompt tidak boleh kosong.' });
 
   try {
-    // build request payload using the pattern you provided
     const payload = {
       user_id: "guest_df14885919c34ec19fc50a7de76d50c8",
       user_level: "free",
@@ -23,7 +22,7 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "user",
-          content: prompt // gunakan prompt yang dikirim user
+          content: prompt
         }
       ],
       prompt: prompt,
@@ -53,15 +52,14 @@ export default async function handler(req, res) {
         'priority': 'u=1, i'
       },
       data: JSON.stringify(payload),
-      timeout: 20000 // opsional: timeout 20s
+      timeout: 20000
     };
 
     const response = await axios.request(config);
-    // return seluruh response data dari endpoint pihak ketiga
-    return res.status(200).json({ data: response.data });
+    return res.status(200).json(response.data);
   } catch (err) {
-    console.error('GPT proxy error:', err?.response?.data || err.message || err);
-    const message = err?.response?.data || err.message || 'Terjadi kesalahan saat memanggil endpoint';
+    console.error('Uncensored API error:', err.message);
+    const message = err.response?.data || err.message || 'Terjadi kesalahan di server.';
     return res.status(500).json({ error: message });
   }
 }
