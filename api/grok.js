@@ -1,15 +1,11 @@
 import axios from 'axios';
 
 export default async function handler(req, res) {
-  // ===== CORS Fix =====
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
-  }
-  // ====================
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed. Use POST.' });
 
   const { prompt } = req.body || {};
   if (!prompt) return res.status(400).json({ error: 'Prompt tidak boleh kosong.' });
@@ -19,13 +15,8 @@ export default async function handler(req, res) {
       user_id: "guest_df14885919c34ec19fc50a7de76d50c8",
       user_level: "free",
       model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      prompt: prompt,
+      messages: [{ role: "user", content: prompt }],
+      prompt,
       temperature: 0.7,
       enableWebSearch: false,
       usedVoiceInput: false
@@ -56,9 +47,48 @@ export default async function handler(req, res) {
     };
 
     const response = await axios.request(config);
-    return res.status(200).json(response.data);
+    const resp = response.data;
+
+    if (typeof resp === 'string' && resp.includes('data:')) {
+      let finalReply = '';
+      const lines = resp.split(/\r?\n/);
+      for (let line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const payload = line.replace(/^data:\s*/, '').trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.content) finalReply += parsed.content;
+          else if (Array.isArray(parsed.choices)) {
+            for (const c of parsed.choices) {
+              if (c.delta?.content) finalReply += c.delta.content;
+              else if (c.text) finalReply += c.text;
+              else if (c.message?.content) finalReply += c.message.content;
+            }
+          } else {
+            for (const key in parsed) {
+              if (typeof parsed[key] === 'string') finalReply += parsed[key];
+            }
+          }
+        } catch {}
+      }
+      return res.status(200).json({ reply: finalReply || 'AI tidak merespon (stream kosong).' });
+    }
+
+    if (typeof resp === 'object') {
+      let reply = resp.reply || resp.text || resp.message || '';
+      if (!reply && Array.isArray(resp.choices)) {
+        reply = resp.choices.map(c => c.text || c.message?.content || (c.delta?.content || '')).join('');
+      }
+      if (!reply) {
+        try { reply = JSON.stringify(resp); } catch { reply = String(resp); }
+      }
+      return res.status(200).json({ reply });
+    }
+
+    return res.status(200).json({ reply: String(resp) });
   } catch (err) {
-    console.error('Uncensored API error:', err.message);
+    console.error('Grok API error:', err.message, err.response?.data);
     const message = err.response?.data || err.message || 'Terjadi kesalahan di server.';
     return res.status(500).json({ error: message });
   }
