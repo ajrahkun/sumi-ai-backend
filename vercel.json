@@ -6,7 +6,7 @@
     { "src": "api/gpt.js", "use": "@vercel/node" },
     { "src": "api/venice.js", "use": "@vercel/node" },
     { "src": "api/grok.js", "use": "@vercel/node" },
-    { "src": "/api/upscale_v1.js", "use": "@vercel/node" },
+    { "src": "/api/upscale_v1.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/gemini", "dest": "/api/gemini.js" },
