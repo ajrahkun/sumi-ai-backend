@@ -6,8 +6,8 @@
     { "src": "api/gpt.js", "use": "@vercel/node" },
     { "src": "api/venice.js", "use": "@vercel/node" },
     { "src": "api/grok.js", "use": "@vercel/node" },
-    { "src": "/api/upscale_v1.js", "use": "@vercel/node" },
-    { "src": "/api/upscale_v2.js", "use": "@vercel/node" },
+    { "src": "api/upscale_v1.js", "use": "@vercel/node" },
+    { "src": "api/upscale_v2.js", "use": "@vercel/node" },
     { "src": "api/stalk.js", "use": "@vercel/node" }
   ],
   "routes": [
@@ -18,6 +18,6 @@
     { "src": "/api/grok", "dest": "/api/grok.js" },
     { "src": "/api/upscale_v1", "dest": "/api/upscale_v1.js" },
     { "src": "/api/upscale_v2", "dest": "/api/upscale_v2.js" },
-    { "src": "api/stalk.js", "dest": "/api/stalk.js" }
+    { "src": "/api/stalk", "dest": "/api/stalk.js" }
   ]
 }
