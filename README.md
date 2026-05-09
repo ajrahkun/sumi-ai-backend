@@ -1,1 +1,0 @@
-# sumi-ai-backend
