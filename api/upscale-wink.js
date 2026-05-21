@@ -6,7 +6,6 @@ export const config = {
 };
 
 const WINK_BASE = 'https://wink.ai';
-const WINK_STRATEGY = 'https://strategy.app.meitudata.com';
 const UA = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Mobile Safari/537.36';
 
 function makeWinkTrace() {
@@ -62,62 +61,18 @@ export default async function handler(req, res) {
             ...extra
         });
 
-        const resSign = await axios.get(`${WINK_BASE}/api/file/get_maat_sign.json?${baseParams({ suffix: '.mp4', type: 'temp', count: '1' }).toString()}`, {
-            headers: { ...baseHeaders, ...makeWinkTrace() },
+        const transBody = baseParams({
+            source_url: video_url
+        });
+
+        const resTransStart = await axios.post(`${WINK_BASE}/api/file/video_trans_start.json`, transBody.toString(), {
+            headers: { ...baseHeaders, ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' },
             validateStatus: () => true
         });
-        if (resSign.status >= 400 || resSign.data?.code !== 0) throw new Error('Gagal mengambil Maat Sign');
-        const sign = resSign.data.data;
 
-        const policyParams = new URLSearchParams({ app: sign.app, count: String(sign.count), sig: sign.sig, sigTime: sign.sig_time, sigVersion: sign.sig_version, suffix: sign.suffix, type: sign.type });
-        const resPolicy = await axios.get(`${WINK_STRATEGY}/upload/policy?${policyParams.toString()}`, {
-            headers: { accept: '*/*', origin: WINK_BASE, referer: `${WINK_BASE}/`, 'user-agent': UA },
-            validateStatus: () => true
-        });
-        if (resPolicy.status >= 400 || !resPolicy.data?.[0]?.qiniu) throw new Error('Gagal mengambil Upload Policy');
-        const policy = resPolicy.data[0].qiniu;
-
-        let bucketName = 'maat-temp';
-        if (policy.key && policy.key.includes(':')) {
-            bucketName = policy.key.split(':')[0];
-        } else if (policy.token && policy.token.includes(':')) {
-            try {
-                const putPolicyB64 = policy.token.split(':')[2];
-                const putPolicy = JSON.parse(Buffer.from(putPolicyB64, 'base64').toString('utf-8'));
-                if (putPolicy.scope) bucketName = putPolicy.scope.split(':')[0];
-            } catch (e) {}
+        if (resTransStart.status >= 400 || resTransStart.data?.code !== 0 || !resTransStart.data?.data?.id) {
+            throw new Error('Wink menolak registrasi URL video eksternal.');
         }
-
-        const toEntry = `${bucketName}:${policy.key}`;
-        const toEncoded = Buffer.from(toEntry).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
-
-        const remoteForm = new URLSearchParams({
-            token: policy.token,
-            url: video_url,
-            to: toEncoded
-        });
-
-        const resUpload = await axios.post('https://upload.qiniup.com/fetch', remoteForm.toString(), {
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
-            validateStatus: () => true
-        });
-        if (resUpload.status >= 400) throw new Error('Gagal mengunggah file ke Qiniu via Vercel Proxy');
-
-        const uploaded = {
-            file_key: policy.key,
-            source_url: resUpload.data?.url || `http://maat-temp.meitudata.com/${policy.key}`
-        };
-
-        await axios.post(`${WINK_BASE}/api/file/video_cover_and_display_info_ext.json`, baseParams({ file_key: uploaded.file_key }).toString(), {
-            headers: { ...baseHeaders, ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-            validateStatus: () => true
-        });
-
-        const resTransStart = await axios.post(`${WINK_BASE}/api/file/video_trans_start.json`, baseParams({ file_key: uploaded.file_key }).toString(), {
-            headers: { ...baseHeaders, ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-            validateStatus: () => true
-        });
-        if (resTransStart.status >= 400 || resTransStart.data?.code !== 0 || !resTransStart.data?.data?.id) throw new Error('Gagal memulai Transcode');
         const transcodeId = resTransStart.data.data.id;
 
         const resQuery = await axios.get(`${WINK_BASE}/api/file/video_trans_query.json?${baseParams({ id: transcodeId }).toString()}`, {
@@ -125,13 +80,12 @@ export default async function handler(req, res) {
             validateStatus: () => true
         });
         const queryData = resQuery.data?.data;
-        const videoTranscoded = queryData?.video_transcoded || queryData?.transcoded_video || queryData?.transcoded_url || queryData?.video_url || uploaded.source_url;
-        const finalSourceUrl = queryData?.video || queryData?.url || queryData?.source_url || uploaded.source_url;
+        const videoTranscoded = queryData?.video_transcoded || queryData?.transcoded_video || queryData?.transcoded_url || queryData?.video_url || video_url;
 
         const delivBody = baseParams({
             type: '11',
             content_type: '2',
-            source_url: finalSourceUrl,
+            source_url: video_url,
             type_params: JSON.stringify({ is_mirror: 0, orientation_tag: 1, j_420_trans: '1', return_ext: '2' }),
             right_detail: JSON.stringify({ source: '1', touch_type: '4', function_id: '630', material_id: '63011', url: 'https://wink.ai/video-enhancer/upload' }),
             ext_params: JSON.stringify({ task_name: `Enhancer-Ultra HD-${crypto.randomBytes(4).toString('hex')}`, records: '11', video_transcoded: videoTranscoded }),
