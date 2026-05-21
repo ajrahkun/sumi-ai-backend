@@ -21,6 +21,7 @@
     { "src": "/api/upscale_v1", "dest": "/api/upscale_v1.js" },
     { "src": "/api/upscale_v2", "dest": "/api/upscale_v2.js" },
     { "src": "/api/stalk", "dest": "/api/stalk.js" },
+    { "src": "/api/stalk-tiktok", "dest": "/api/stalk-tiktok.js" },
     { "src": "/api/upscale-wink", "dest": "/api/upscale-wink.js" }
   ]
 }
