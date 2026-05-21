@@ -77,20 +77,35 @@ export default async function handler(req, res) {
         if (resPolicy.status >= 400 || !resPolicy.data?.[0]?.qiniu) throw new Error('Gagal mengambil Upload Policy');
         const policy = resPolicy.data[0].qiniu;
 
+        let bucketName = 'maat-temp';
+        if (policy.key && policy.key.includes(':')) {
+            bucketName = policy.key.split(':')[0];
+        } else if (policy.token && policy.token.includes(':')) {
+            try {
+                const putPolicyB64 = policy.token.split(':')[2];
+                const putPolicy = JSON.parse(Buffer.from(putPolicyB64, 'base64').toString('utf-8'));
+                if (putPolicy.scope) bucketName = putPolicy.scope.split(':')[0];
+            } catch (e) {}
+        }
+
+        const toEntry = `${bucketName}:${policy.key}`;
+        const toEncoded = Buffer.from(toEntry).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
+
         const remoteForm = new URLSearchParams({
             token: policy.token,
-            key: policy.key,
-            url: video_url
+            url: video_url,
+            to: toEncoded
         });
 
         const resUpload = await axios.post('https://upload.qiniup.com/fetch', remoteForm.toString(), {
             headers: { 'content-type': 'application/x-www-form-urlencoded' },
             validateStatus: () => true
         });
+        if (resUpload.status >= 400) throw new Error('Gagal mengunggah file ke Qiniu via Vercel Proxy');
 
         const uploaded = {
             file_key: policy.key,
-            source_url: resUpload.data?.url || resUpload.data?.key || policy.key
+            source_url: resUpload.data?.url || `http://maat-temp.meitudata.com/${policy.key}`
         };
 
         await axios.post(`${WINK_BASE}/api/file/video_cover_and_display_info_ext.json`, baseParams({ file_key: uploaded.file_key }).toString(), {
@@ -140,4 +155,4 @@ export default async function handler(req, res) {
     } catch (err) {
         return res.status(500).json({ error: err.message });
     }
-};
+}
