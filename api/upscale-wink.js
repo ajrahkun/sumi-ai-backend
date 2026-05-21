@@ -79,9 +79,10 @@ export default async function handler(req, res) {
         const policy = resPolicy.data[0].qiniu;
 
         const form = new FormData();
-        const videoStream = await axios.get(video_url, { responseType: 'stream' });
+        const videoBuffer = await axios.get(video_url, { responseType: 'arraybuffer' });
+        const finalBuffer = Buffer.from(videoBuffer.data);
         
-        form.append('file', videoStream.data, { filename: 'video.mp4', contentType: 'video/mp4' });
+        form.append('file', finalBuffer, { filename: 'video.mp4', contentType: 'video/mp4' });
         form.append('token', policy.token);
         form.append('key', policy.key);
         form.append('fname', 'video.mp4');
