@@ -1,5 +1,4 @@
 import axios from 'axios';
-import FormData from 'form-data';
 import crypto from 'node:crypto';
 
 export const config = {
@@ -33,8 +32,8 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Gunakan metode POST.' });
 
-    const { video_base64 } = req.body || {};
-    if (!video_base64) return res.status(400).json({ error: "Mana 'video_base64' nya?" });
+    const { video_url } = req.body || {};
+    if (!video_url) return res.status(400).json({ error: "Mana 'video_url' nya?" });
 
     try {
         const gnum = crypto.randomUUID();
@@ -78,24 +77,20 @@ export default async function handler(req, res) {
         if (resPolicy.status >= 400 || !resPolicy.data?.[0]?.qiniu) throw new Error('Gagal mengambil Upload Policy');
         const policy = resPolicy.data[0].qiniu;
 
-        const finalBuffer = Buffer.from(video_base64, 'base64');
-        const form = new FormData();
-        form.append('file', finalBuffer, { filename: 'video.mp4', contentType: 'video/mp4' });
-        form.append('token', policy.token);
-        form.append('key', policy.key);
-        form.append('fname', 'video.mp4');
+        const remoteForm = new URLSearchParams({
+            token: policy.token,
+            key: policy.key,
+            url: video_url
+        });
 
-        const resUpload = await axios.post(policy.url, form, {
-            headers: form.getHeaders({ origin: WINK_BASE, referer: `${WINK_BASE}/`, 'user-agent': UA, accept: '*/*' }),
-            maxBodyLength: Infinity,
-            maxContentLength: Infinity,
+        const resUpload = await axios.post('https://upload.qiniup.com/fetch', remoteForm.toString(), {
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
             validateStatus: () => true
         });
-        if (resUpload.status >= 400) throw new Error('Gagal mengunggah file ke Qiniu via Vercel Proxy');
-        
+
         const uploaded = {
             file_key: policy.key,
-            source_url: resUpload.data.url || resUpload.data.data || policy.data
+            source_url: resUpload.data?.url || resUpload.data?.key || policy.key
         };
 
         await axios.post(`${WINK_BASE}/api/file/video_cover_and_display_info_ext.json`, baseParams({ file_key: uploaded.file_key }).toString(), {
