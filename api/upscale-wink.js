@@ -1,8 +1,6 @@
-import { CookieJar } from 'tough-cookie';
-import { wrapper } from 'axios-cookiejar-support';
 import axios from 'axios';
+import FormData from 'form-data';
 import crypto from 'node:crypto';
-import formData from 'form-data';
 
 export const config = {
     runtime: 'nodejs'
@@ -35,31 +33,24 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Gunakan metode POST.' });
 
-    const { video_url } = req.body;
+    const { video_url } = req.body || {};
     if (!video_url) return res.status(400).json({ error: "Mana 'video_url' nya?" });
 
     try {
         const gnum = crypto.randomUUID();
-        const jar = new CookieJar();
-        await jar.setCookie(`_sm=${gnum}; Path=/; Domain=wink.ai`, WINK_BASE);
-        await jar.setCookie(`meitustat=${encodeURIComponent(JSON.stringify({ wgid: gnum }))}; Path=/; Domain=wink.ai`, WINK_BASE);
+        const cookieHeader = `_sm=${gnum}; meitustat=${encodeURIComponent(JSON.stringify({ wgid: gnum }))}`;
 
-        const api = wrapper(axios.create({
-            baseURL: WINK_BASE,
-            jar,
-            withCredentials: true,
-            validateStatus: () => true,
-            headers: {
-                accept: '*/*',
-                origin: WINK_BASE,
-                referer: `${WINK_BASE}/video-enhancer/upload`,
-                'user-agent': UA,
-                'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
-                'sec-ch-ua-mobile': '?1',
-                'sec-ch-ua-platform': '"Android"',
-                ab_info: JSON.stringify({ ab_codes: [], version: '1.4.4' })
-            }
-        }));
+        const baseHeaders = {
+            'accept': '*/*',
+            'origin': WINK_BASE,
+            'referer': `${WINK_BASE}/video-enhancer/upload`,
+            'user-agent': UA,
+            'cookie': cookieHeader,
+            'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+            'sec-ch-ua-mobile': '?1',
+            'sec-ch-ua-platform': '"Android"',
+            'ab_info': JSON.stringify({ ab_codes: [], version: '1.4.4' })
+        };
 
         const baseParams = (extra = {}) => new URLSearchParams({
             client_id: '1189857605',
@@ -72,7 +63,10 @@ export default async function handler(req, res) {
             ...extra
         });
 
-        const resSign = await api.get(`/api/file/get_maat_sign.json?${baseParams({ suffix: '.mp4', type: 'temp', count: '1' }).toString()}`, { headers: makeWinkTrace() });
+        const resSign = await axios.get(`${WINK_BASE}/api/file/get_maat_sign.json?${baseParams({ suffix: '.mp4', type: 'temp', count: '1' }).toString()}`, {
+            headers: { ...baseHeaders, ...makeWinkTrace() },
+            validateStatus: () => true
+        });
         if (resSign.status >= 400 || resSign.data?.code !== 0) throw new Error('Gagal mengambil Maat Sign');
         const sign = resSign.data.data;
 
@@ -81,11 +75,10 @@ export default async function handler(req, res) {
             headers: { accept: '*/*', origin: WINK_BASE, referer: `${WINK_BASE}/`, 'user-agent': UA },
             validateStatus: () => true
         });
-
         if (resPolicy.status >= 400 || !resPolicy.data?.[0]?.qiniu) throw new Error('Gagal mengambil Upload Policy');
         const policy = resPolicy.data[0].qiniu;
 
-        const form = new formData();
+        const form = new FormData();
         const videoStream = await axios.get(video_url, { responseType: 'stream' });
         
         form.append('file', videoStream.data, { filename: 'video.mp4', contentType: 'video/mp4' });
@@ -106,13 +99,22 @@ export default async function handler(req, res) {
             source_url: resUpload.data.url || resUpload.data.data || policy.data
         };
 
-        await api.post('/api/file/video_cover_and_display_info_ext.json', baseParams({ file_key: uploaded.file_key }).toString(), { headers: { ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' } });
+        await axios.post(`${WINK_BASE}/api/file/video_cover_and_display_info_ext.json`, baseParams({ file_key: uploaded.file_key }).toString(), {
+            headers: { ...baseHeaders, ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            validateStatus: () => true
+        });
 
-        const resTransStart = await api.post('/api/file/video_trans_start.json', baseParams({ file_key: uploaded.file_key }).toString(), { headers: { ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' } });
+        const resTransStart = await axios.post(`${WINK_BASE}/api/file/video_trans_start.json`, baseParams({ file_key: uploaded.file_key }).toString(), {
+            headers: { ...baseHeaders, ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            validateStatus: () => true
+        });
         if (resTransStart.status >= 400 || resTransStart.data?.code !== 0 || !resTransStart.data?.data?.id) throw new Error('Gagal memulai Transcode');
         const transcodeId = resTransStart.data.data.id;
 
-        const resQuery = await api.get(`/api/file/video_trans_query.json?${baseParams({ id: transcodeId }).toString()}`, { headers: makeWinkTrace() });
+        const resQuery = await axios.get(`${WINK_BASE}/api/file/video_trans_query.json?${baseParams({ id: transcodeId }).toString()}`, {
+            headers: { ...baseHeaders, ...makeWinkTrace() },
+            validateStatus: () => true
+        });
         const queryData = resQuery.data?.data;
         const videoTranscoded = queryData?.video_transcoded || queryData?.transcoded_video || queryData?.transcoded_url || queryData?.video_url || uploaded.source_url;
         const finalSourceUrl = queryData?.video || queryData?.url || queryData?.source_url || uploaded.source_url;
@@ -127,7 +129,10 @@ export default async function handler(req, res) {
             with_prepare: '1'
         });
 
-        const resDeliv = await api.post('/api/meitu_ai/delivery.json', delivBody.toString(), { headers: { ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' } });
+        const resDeliv = await axios.post(`${WINK_BASE}/api/meitu_ai/delivery.json`, delivBody.toString(), {
+            headers: { ...baseHeaders, ...makeWinkTrace(), 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            validateStatus: () => true
+        });
         if (resDeliv.status >= 400 || resDeliv.data?.code !== 0) throw new Error('Gagal mendaftarkan tugas ke antrean Meitu AI');
         
         const msgId = resDeliv.data.data.msg_id || resDeliv.data.data.prepare_msg_id;
