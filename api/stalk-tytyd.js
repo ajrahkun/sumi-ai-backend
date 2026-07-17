@@ -1,10 +1,17 @@
 import axios from 'axios';
+import crypto from 'crypto';
 
 export const config = {
     runtime: 'nodejs'
 };
 
 const SECRET_KEY = 'xG4_jP2-vM8_tW7-mQ5z';
+const IV = Buffer.from([
+    10, 20, 30, 40,
+    50, 60, 70, 80,
+    90, 100, 110, 120,
+    130, 140, 150, 160
+]);
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -48,7 +55,7 @@ export default async function handler(req, res) {
             `https://www.tikwm.com/api/challenge/info?challenge_name=${encodeURIComponent(cleanHashtag)}`,
             {
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0',
                     'Accept': 'application/json',
                     'Referer': 'https://www.tikwm.com/'
                 },
@@ -63,9 +70,28 @@ export default async function handler(req, res) {
             });
         }
 
+        // Data yang ingin dikirim
+        const plainText = JSON.stringify(response.data.data);
+
+        // SHA256(secret)
+        const key = crypto
+            .createHash('sha256')
+            .update(SECRET_KEY)
+            .digest();
+
+        // AES-256-CBC
+        const cipher = crypto.createCipheriv(
+            'aes-256-cbc',
+            key,
+            IV
+        );
+
+        let encrypted = cipher.update(plainText, 'utf8', 'base64');
+        encrypted += cipher.final('base64');
+
         return res.status(200).json({
             success: true,
-            data: response.data.data
+            payload: encrypted
         });
 
     } catch (err) {
