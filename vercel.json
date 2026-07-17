@@ -11,7 +11,8 @@
     { "src": "api/stalk.js", "use": "@vercel/node" },
     { "src": "api/stalk-tiktok.js", "use": "@vercel/node" },
     { "src": "api/stalk-hashtag.js", "use": "@vercel/node" },
-    { "src": "api/upscale-wink.js", "use": "@vercel/node" }
+    { "src": "api/upscale-wink.js", "use": "@vercel/node" },
+    { "src": "api/stalk-tytyd.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/gemini", "dest": "/api/gemini.js" },
@@ -24,6 +25,7 @@
     { "src": "/api/stalk", "dest": "/api/stalk.js" },
     { "src": "/api/stalk-tiktok", "dest": "/api/stalk-tiktok.js" },
     { "src": "/api/stalk-hashtag", "dest": "/api/stalk-hashtag.js" },
-    { "src": "/api/upscale-wink", "dest": "/api/upscale-wink.js" }
+    { "src": "/api/upscale-wink", "dest": "/api/upscale-wink.js" },
+    { "src": "/api/stalk-tytyd", "dest": "/api/stalk-tytyd.js" }
   ]
 }
