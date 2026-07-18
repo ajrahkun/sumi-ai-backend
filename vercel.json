@@ -28,6 +28,6 @@
     { "src": "/api/stalk-hashtag", "dest": "/api/stalk-hashtag.js" },
     { "src": "/api/upscale-wink", "dest": "/api/upscale-wink.js" },
     { "src": "/api/stalk-tytyd", "dest": "/api/stalk-tytyd.js" },
-    { "src": "/api/ajra-ttdl", "dest": "/api/ajra-ttdl.js" },
+    { "src": "/api/ajra-ttdl", "dest": "/api/ajra-ttdl.js" }
   ]
 }
