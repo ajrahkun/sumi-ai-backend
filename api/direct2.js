@@ -39,16 +39,16 @@ export default async function handler(req, res) {
         });
     }
 
-    const { hashtag } = req.query;
+    const { query } = req.query;
 
-    if (!hashtag) {
+    if (!query) {
         return res.status(400).json({
             success: false,
-            message: 'Masukkan nama hashtag!'
+            message: 'ajra depeloper :3'
         });
     }
 
-    const cleanHashtag = hashtag.replace(/^#/, '');
+    const cleanHashtag = quey.replace(/^#/, '');
 
     try {
         const response = await axios.get(
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
     } catch (err) {
         return res.status(500).json({
             success: false,
-            message: err.message || 'Gagal mengambil data hashtag.'
+            message: err.message || 'yah, di entot ajra.'
         });
     }
 }
