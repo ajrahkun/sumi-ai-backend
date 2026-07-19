@@ -1,8 +1,19 @@
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://kageen.my.id');
+  // 1. Deteksi dari mana request ini berasal
+  const origin = req.headers.origin;
+  const allowedOrigins = ['https://kageen.my.id', 'http://127.0.0.1:5500', 'http://localhost:5500'];
+  
+  // 2. Set CORS dinamis (Bisa Localhost, bisa Kageen)
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', 'https://kageen.my.id');
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
+  // Loloskan CORS Preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -21,7 +32,7 @@ export default async function handler(req, res) {
       headers: {
         'Authorization': `Bearer ${SECRET_KEY}`,
         'Origin': req.headers.origin || 'https://kageen.my.id',
-        'User-Agent': 'Kagenou-Vercel-Proxy'
+        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0'
       }
     });
 
