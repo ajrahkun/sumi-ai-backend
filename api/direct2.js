@@ -48,7 +48,7 @@ export default async function handler(req, res) {
         });
     }
 
-    const cleanHashtag = quey.replace(/^#/, '');
+    const cleanHashtag = query.replace(/^#/, '');
 
     try {
         const response = await axios.get(
