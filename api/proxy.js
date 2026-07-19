@@ -20,6 +20,7 @@ export default async function handler(req, res) {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${SECRET_KEY}`,
+        'Origin': req.headers.origin || 'https://kageen.my.id',
         'User-Agent': 'Kagenou-Vercel-Proxy'
       }
     });
