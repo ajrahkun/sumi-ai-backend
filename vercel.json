@@ -1,11 +1,13 @@
 {
   "version": 2,
   "builds": [
+    { "src": "api/stalk-tiktok.js", "use": "@vercel/node" },
     { "src": "api/proxy.js", "use": "@vercel/node" },
     { "src": "api/direct1.js", "use": "@vercel/node" },
     { "src": "api/direct2.js", "use": "@vercel/node" }
   ],
   "routes": [
+    { "src": "/api/stalk-tiktok", "dest": "/api/stalk-tiktok.js" },
     { "src": "/api/proxy", "dest": "/api/proxy.js" },
     { "src": "/api/direct1", "dest": "/api/direct1.js" },
     { "src": "/api/direct2", "dest": "/api/direct2.js" }
