@@ -5,7 +5,7 @@ export const config = {
     runtime: 'nodejs'
 };
 
-const SECRET_KEY = 'R3vK8pX2mQ9zN5tF1bH4sY7dQ0wG6vJ3mL8zP4kF9xT2sB';
+const SECRET_KEY = 'A5qW8mE2vK9pX4zN1tF7bH3sY6dQ0cG2jJ9mL5zP8kF4xT';
 const IV = Buffer.from([
     10, 20, 30, 40,
     50, 60, 70, 80,
