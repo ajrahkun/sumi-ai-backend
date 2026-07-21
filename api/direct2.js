@@ -15,7 +15,7 @@ const IV = Buffer.from([
 
 export default async function handler(req, res) {
     const origin = req.headers.origin;
-    const allowedOrigins = ['https://kageen.my.id', 'http://127.0.0.1:5500'];
+    const allowedOrigins = ['https://kageen.my.id', 'http://127.0.0.1:5500', 'http://localhost:5500'];
 
     if (!origin || !allowedOrigins.includes(origin)) {
         return res.status(403).json({
